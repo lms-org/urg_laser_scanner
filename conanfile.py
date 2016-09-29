@@ -1,7 +1,7 @@
 from conans import ConanFile, CMake
 
 class SdlImageRendererConan(ConanFile):
-    name = "lms_sdl_image_renderer"
+    name = "lms_urg_laser_scanner"
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
     exports = "include/*","src/*","CMakeList.txt","configs/*","README.md"
