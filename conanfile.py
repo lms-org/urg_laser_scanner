@@ -1,10 +1,10 @@
 from conans import ConanFile, CMake
 
-class SdlImageRendererConan(ConanFile):
+class UrgLaserScannerConan(ConanFile):
     name = "lms_urg_laser_scanner"
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
-    exports = "include/*","src/*","CMakeList.txt","configs/*","README.md"
+    exports = "include/*","src/*","CMakeLists.txt","configs/*","README.md"
     requires = "lms_imaging/1.0@lms/stable","lms/2.0@lms/stable","urg_network/1.2.0@lms/stable"
     generators = "cmake"
 
