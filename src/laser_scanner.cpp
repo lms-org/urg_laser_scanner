@@ -28,8 +28,8 @@ void draw(const std::vector<lms::math::vertex2f> &data){
     for(const lms::math::vertex2f &v:data){
         graphics.drawPixel(v.x*scale+imgWidth/2,-v.y*scale+imgHeight/2);
     }
-    cv::imshow("Voll Laser", image.convertToOpenCVMat() );
-    cv::waitKey(1);
+    //cv::imshow("Voll Laser", image.convertToOpenCVMat() );
+   // cv::waitKey(1);
 
 }
 
@@ -37,9 +37,8 @@ void draw(const std::vector<lms::math::vertex2f> &data){
 
 
 bool LaserScanner::initialize() {
-    data_raw = datamanager()->writeChannel<std::vector<long>>(this,"URG_RAW_DATA");
-    data = datamanager()->writeChannel<std::vector<lms::math::vertex2f>>(this,"URG_DATA");
-    config = getConfig();
+    data_raw = writeChannel<std::vector<long>>("URG_RAW_DATA");
+    data = writeChannel<std::vector<lms::math::vertex2f>>("URG_DATA");
     qrk::Connection_information information(1, nullptr);
 
     // Connects to the sensor
@@ -51,7 +50,7 @@ bool LaserScanner::initialize() {
         return false;
     }
     //set the range
-    urg.set_scanning_parameter(urg.deg2step(config->get<double>("minDeg",-90)), urg.deg2step(config->get<double>("maxDeg",90)), 0);
+    urg.set_scanning_parameter(urg.deg2step(config().get<double>("minDeg",-90)), urg.deg2step(config().get<double>("maxDeg",90)), 0);
     printSettings();
     //start measurement
     urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0);
@@ -112,7 +111,7 @@ bool LaserScanner::cycle () {
     }
     testL::draw(*data);
 
-    if(config->get<bool>("printFront",true)){
+    if(config().get<bool>("printFront",true)){
         printFront(*data_raw, time_stamp);
     }
     return true;
