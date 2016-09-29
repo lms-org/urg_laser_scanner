@@ -14,4 +14,4 @@ class UrgLaserScannerConan(ConanFile):
         self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
-        self.copy("*.h", dst="include",src="include")
+        self.copy("*.so",dst="bin")
