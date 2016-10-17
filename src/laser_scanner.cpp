@@ -34,7 +34,7 @@ void LaserScanner::configsChanged(){
 
 void LaserScanner::printFront(const std::vector<long>& data, long time_stamp){
     int front_index = urg.step2index(0);
-    std::cout << data[front_index] << " [mm], ("
+    logger.info("front distance") << data[front_index] << " [mm], ("
               << time_stamp << " [msec])" <<std::endl;
 }
 
@@ -82,7 +82,7 @@ bool LaserScanner::cycle () {
                 l=max_distance;
         }
         double radian = urg.index2rad(i);
-        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))-position);
+        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000-position);
     }
 
     if(config().get<bool>("printFront",true)){
