@@ -66,13 +66,13 @@ bool LaserScanner::cycle () {
     long time_stamp = 0;
     //get data
     if (!urg.get_distance(measurement, &time_stamp)) {
-        std::cout << "Urg_driver::get_distance(): " << urg.what() << std::endl;
-        return 1;
+        logger.error("cyle") << "Urg_driver::get_distance(): " << urg.what();
+        return true;
     }
     //check if we have new data
     lms::Time currentTime = lms::Time::fromMillis(urg.get_sensor_time_stamp()); //TODO not sure if millis is used
     if(data_raw->timestamp() == currentTime){
-        logger.debug("No new data aquired");
+        logger.warn("No new data aquired");
         return true;
     }
     //set urg values
