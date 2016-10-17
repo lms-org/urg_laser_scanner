@@ -7,6 +7,7 @@
 #include <time.h>
 #include "lms/math/vertex.h"
 #include <lms/math/polyline.h>
+#include <sensor_utils/distance_sensor.h>
 
 class LaserScanner:public lms::Module{
 public:
@@ -20,7 +21,8 @@ private:
     //TODO rotation
     lms::math::vertex2f position;
     qrk::Urg_driver urg;
-    lms::WriteDataChannel<std::vector<long>> data_raw;
+    std::vector<long> measurement;
+    lms::WriteDataChannel<sensor_utils::DistanceSensorRadial> data_raw;
     lms::WriteDataChannel<lms::math::polyLine2f> data;
 
     //todo change to printangle given in the config

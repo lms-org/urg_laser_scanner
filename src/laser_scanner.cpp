@@ -5,7 +5,7 @@
 
 
 bool LaserScanner::initialize() {
-    data_raw = writeChannel<std::vector<long>>("URG_DATA_RAW");
+    data_raw = writeChannel<sensor_utils::DistanceSensorRadial>("URG_DATA_RAW");
     data = writeChannel<lms::math::polyLine2f>("URG_DATA");
     qrk::Connection_information information(1, nullptr);
 
@@ -64,18 +64,31 @@ bool LaserScanner::deinitialize() {
 
 bool LaserScanner::cycle () {
     long time_stamp = 0;
-
-    if (!urg.get_distance(*data_raw, &time_stamp)) {
+    //get data
+    if (!urg.get_distance(measurement, &time_stamp)) {
         std::cout << "Urg_driver::get_distance(): " << urg.what() << std::endl;
         return 1;
     }
+    //check if we have new data
+    lms::Time currentTime = lms::Time::fromMillis(urg.get_sensor_time_stamp()); //TODO not sure if millis is used
+    if(data_raw->timestamp() == currentTime){
+        logger.debug("No new data aquired");
+        return true;
+    }
+    //set urg values
+    data_raw->timestamp(currentTime);
+    data_raw->anglePerIndex = std::abs(urg.index2rad(0)-urg.index2rad(0));
+    data_raw->startAngle = urg.index2rad(0);
+    data_raw->maxDistance = urg.max_distance();
+    data_raw->minDistance = urg.min_distance();
+    data_raw->localPosition = position;
+
     //convert to point-cloud
     data->points().clear();
     long min_distance = urg.min_distance();
     long max_distance = urg.max_distance();
-    size_t data_n = data_raw->size();
-    for (size_t i = 0; i < data_n; ++i) {
-        float l = (*data_raw)[i];
+    for (int i = 0; i < (int)measurement.size(); ++i) {
+        float l = measurement[i];
         if (l < min_distance) {
             l=min_distance;
         }else if (l > max_distance){
@@ -85,8 +98,8 @@ bool LaserScanner::cycle () {
         data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000-position);
     }
 
-    if(config().get<bool>("printFront",true)){
-        printFront(*data_raw, time_stamp);
+    if(config().get<bool>("printFront",false)){
+        printFront(measurement, time_stamp);
     }
     return true;
 }
