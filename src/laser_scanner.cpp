@@ -92,9 +92,11 @@ bool LaserScanner::cycle () {
     for (int i = 0; i < (int)measurement.size(); ++i) {
         float l = measurement[i];
         if (l < min_distance) {
-            l=min_distance;
+                l=min_distance;
+            continue;
         }else if (l > max_distance){
                 l=max_distance;
+            continue;
         }
         double radian = urg.index2rad(i);
         data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000-position);
