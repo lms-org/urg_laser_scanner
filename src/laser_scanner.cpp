@@ -64,7 +64,7 @@ bool LaserScanner::deinitialize() {
 
 bool LaserScanner::cycle () {
     long time_stamp = 0;
-    //get data
+    //get data TODO call this in another thread to stop it from blocking!
     if (!urg.get_distance(measurement, &time_stamp)) {
         logger.error("cyle") << "Urg_driver::get_distance(): " << urg.what();
         return true;
