@@ -1,44 +1,12 @@
 #include <laser_scanner.h>
 #include <iostream>
 #include <math.h>
-#include "lms/datamanager.h"
-
-//TODO write some clean draw method
-//testL include
-#include "opencv2/core.hpp"
-#include "lms/imaging/image.h"
-#include "lms/imaging/graphics.h"
-#include <cmath>
-#include <vector>
-namespace testL{
-void draw(const std::vector<lms::math::vertex2f> &data){
-    lms::imaging::Image image;
-    int imgWidth = 1000;
-    int imgHeight = 1000;
-    image.resize(imgWidth,imgHeight,lms::imaging::Format::BGRA);
-    image.fill(0);
-
-    lms::imaging::BGRAImageGraphics graphics(image);
-    //in mm
-    float maxSensorDistance = 1000;
-    graphics.setColor(lms::imaging::red);
-    float scale = 1/maxSensorDistance*std::min(imgWidth,imgHeight);
-    graphics.drawCross(imgWidth/2,imgHeight/2,10);
-    graphics.setColor(lms::imaging::blue);
-    for(const lms::math::vertex2f &v:data){
-        graphics.drawPixel(v.x*scale+imgWidth/2,-v.y*scale+imgHeight/2);
-    }
-    //cv::imshow("Voll Laser", image.convertToOpenCVMat() );
-   // cv::waitKey(1);
-
-}
-
-}
+#include <sensor_utils/distance_sensor.h>
 
 
 bool LaserScanner::initialize() {
-    data_raw = writeChannel<std::vector<long>>("URG_RAW_DATA");
-    data = writeChannel<std::vector<lms::math::vertex2f>>("URG_DATA");
+    data_raw = writeChannel<std::vector<long>>("URG_DATA_RAW");
+    data = writeChannel<lms::math::polyLine2f>("URG_DATA");
     qrk::Connection_information information(1, nullptr);
 
     // Connects to the sensor
@@ -56,6 +24,11 @@ bool LaserScanner::initialize() {
     urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0);
     logger.debug("init")<<"measurement started";
     return true;
+}
+
+void LaserScanner::configsChanged(){
+    position.x = config().get<float>("x");
+    position.y = config().get<float>("y");
 }
 
 
@@ -97,19 +70,20 @@ bool LaserScanner::cycle () {
         return 1;
     }
     //convert to point-cloud
-    data->clear();
+    data->points().clear();
     long min_distance = urg.min_distance();
     long max_distance = urg.max_distance();
     size_t data_n = data_raw->size();
     for (size_t i = 0; i < data_n; ++i) {
         float l = (*data_raw)[i];
-        if ((l <= min_distance) || (l >= max_distance)) {
-            continue;
+        if (l < min_distance) {
+            l=min_distance;
+        }else if (l > max_distance){
+                l=max_distance;
         }
         double radian = urg.index2rad(i);
-        data->push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian)));
+        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))-position);
     }
-    testL::draw(*data);
 
     if(config().get<bool>("printFront",true)){
         printFront(*data_raw, time_stamp);
