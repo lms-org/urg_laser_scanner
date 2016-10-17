@@ -5,7 +5,7 @@
 
 
 bool LaserScanner::initialize() {
-    data_raw = writeChannel<std::vector<long>>("URG_DATA_RAW");
+    data_raw = writeChannel<sensor_utils::DistanceSensorRadial>("URG_DATA_RAW");
     data = writeChannel<lms::math::polyLine2f>("URG_DATA");
     qrk::Connection_information information(1, nullptr);
 
@@ -34,7 +34,7 @@ void LaserScanner::configsChanged(){
 
 void LaserScanner::printFront(const std::vector<long>& data, long time_stamp){
     int front_index = urg.step2index(0);
-    std::cout << data[front_index] << " [mm], ("
+    logger.info("front distance") << data[front_index] << " [mm], ("
               << time_stamp << " [msec])" <<std::endl;
 }
 
@@ -64,29 +64,44 @@ bool LaserScanner::deinitialize() {
 
 bool LaserScanner::cycle () {
     long time_stamp = 0;
-
-    if (!urg.get_distance(*data_raw, &time_stamp)) {
-        std::cout << "Urg_driver::get_distance(): " << urg.what() << std::endl;
-        return 1;
+    //get data
+    if (!urg.get_distance(measurement, &time_stamp)) {
+        logger.error("cyle") << "Urg_driver::get_distance(): " << urg.what();
+        return true;
     }
+    //check if we have new data
+
+    lms::Time currentTime = lms::Time::fromMillis(time_stamp); //TODO not sure if millis is used
+    if(data_raw->timestamp() == currentTime){
+        logger.warn("No new data aquired");
+        return true;
+    }
+
+    //set urg values
+    data_raw->timestamp(currentTime);
+    data_raw->anglePerIndex = std::abs(urg.index2rad(0)-urg.index2rad(0));
+    data_raw->startAngle = urg.index2rad(0);
+    data_raw->maxDistance = urg.max_distance();
+    data_raw->minDistance = urg.min_distance();
+    data_raw->localPosition = position;
+
     //convert to point-cloud
     data->points().clear();
     long min_distance = urg.min_distance();
     long max_distance = urg.max_distance();
-    size_t data_n = data_raw->size();
-    for (size_t i = 0; i < data_n; ++i) {
-        float l = (*data_raw)[i];
+    for (int i = 0; i < (int)measurement.size(); ++i) {
+        float l = measurement[i];
         if (l < min_distance) {
             l=min_distance;
         }else if (l > max_distance){
                 l=max_distance;
         }
         double radian = urg.index2rad(i);
-        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))-position);
+        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000-position);
     }
 
-    if(config().get<bool>("printFront",true)){
-        printFront(*data_raw, time_stamp);
+    if(config().get<bool>("printFront",false)){
+        printFront(measurement, time_stamp);
     }
     return true;
 }
