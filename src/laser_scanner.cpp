@@ -70,11 +70,13 @@ bool LaserScanner::cycle () {
         return true;
     }
     //check if we have new data
-    lms::Time currentTime = lms::Time::fromMillis(urg.get_sensor_time_stamp()); //TODO not sure if millis is used
+
+    lms::Time currentTime = lms::Time::fromMillis(time_stamp); //TODO not sure if millis is used
     if(data_raw->timestamp() == currentTime){
         logger.warn("No new data aquired");
         return true;
     }
+
     //set urg values
     data_raw->timestamp(currentTime);
     data_raw->anglePerIndex = std::abs(urg.index2rad(0)-urg.index2rad(0));
