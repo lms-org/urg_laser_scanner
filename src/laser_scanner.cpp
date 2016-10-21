@@ -1,28 +1,31 @@
 #include <laser_scanner.h>
 #include <iostream>
 #include <math.h>
-#include <sensor_utils/distance_sensor.h>
+//#include <sensor_utils/distance_sensor.h>
 
 
 bool LaserScanner::initialize() {
+    logger.debug("initialize")<<"start";
     data_raw = writeChannel<sensor_utils::DistanceSensorRadial>("URG_DATA_RAW");
     data = writeChannel<lms::math::polyLine2f>("URG_DATA");
     qrk::Connection_information information(1, nullptr);
 
+    logger.debug("initialize")<<"trying to open urg";
     // Connects to the sensor
     if (!urg.open(information.device_or_ip_name(),
                   information.baudrate_or_port_number(),
                   information.connection_type())) {
-        logger.error("init") << "Urg_driver::open(): "
-                             << information.device_or_ip_name() << ": " << urg.what() << std::endl;
+        logger.error("initialize") << "Urg_driver::open(): "
+                             << information.device_or_ip_name() << ": " << urg.what();
         return false;
     }
+    logger.debug("initialize")<<"opened urg sensor";
     //set the range
     urg.set_scanning_parameter(urg.deg2step(config().get<double>("minDeg",-90)), urg.deg2step(config().get<double>("maxDeg",90)), 0);
     printSettings();
     //start measurement
     urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0);
-    logger.debug("init")<<"measurement started";
+    logger.debug("initialize")<<"end";
     return true;
 }
 
@@ -35,7 +38,7 @@ void LaserScanner::configsChanged(){
 void LaserScanner::printFront(const std::vector<long>& data, long time_stamp){
     int front_index = urg.step2index(0);
     logger.info("front distance") << data[front_index] << " [mm], ("
-              << time_stamp << " [msec])" <<std::endl;
+              << time_stamp << " [msec])";
 }
 
 void LaserScanner::printSettings(){
@@ -53,7 +56,7 @@ void LaserScanner::printSettings(){
          << ", " << urg.max_distance() << "\n"
 
     << "scan interval: " << urg.scan_usec() << " [usec]" << "\n"
-    << "sensor data size: " << urg.max_data_size() << "\n";
+    << "sensor data size: " << urg.max_data_size();
 }
 
 

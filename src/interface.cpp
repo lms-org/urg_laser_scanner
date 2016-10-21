@@ -1,7 +1,6 @@
 #include "laser_scanner.h"
+#include <lms/interface.h>
 
-extern "C" {
-void* getInstance () {
-    return new LaserScanner();
-}
-}
+LMS_EXPORT_BEGIN
+LMS_EXPORT_MODULE(LaserScanner)
+LMS_EXPORT_END
