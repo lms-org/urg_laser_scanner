@@ -10,6 +10,7 @@ bool LaserScanner::initialize() {
     data = writeChannel<lms::math::polyLine2f>("URG_DATA");
     qrk::Connection_information information(1, nullptr);
 
+
     logger.debug("initialize")<<"trying to open urg";
     // Connects to the sensor
     if (!urg.open(information.device_or_ip_name(),
@@ -66,6 +67,8 @@ bool LaserScanner::deinitialize() {
 }
 
 bool LaserScanner::cycle () {
+
+
     long time_stamp = 0;
     //get data TODO call this in another thread to stop it from blocking!
     if (!urg.get_distance(measurement, &time_stamp)) {
