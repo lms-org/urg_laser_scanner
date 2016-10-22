@@ -7,7 +7,7 @@
 */
 
 #include "Connection_information.h"
-#include <urg_cpp/detect_os.h>
+#include <cpp/detect_os.h>
 #include <string>
 #include <cstring>
 

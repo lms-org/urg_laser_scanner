@@ -9,7 +9,7 @@
   $Id: Connection_information.h,v e5d1719877a2 2015/05/07 04:12:14 jun $
 */
 
-#include <urg_cpp/Urg_driver.h>
+#include <cpp/Urg_driver.h>
 #include <memory>
 
 
