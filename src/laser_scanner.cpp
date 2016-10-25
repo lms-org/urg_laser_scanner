@@ -26,6 +26,23 @@ bool LaserScanner::initialize() {
     printSettings();
     //start measurement
     urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0);
+    //start importer thread
+    running = true;
+    importer=std::thread([this](){
+        while(running){
+            std::vector<long> myMeasurement;
+            long time_stamp = 0;
+            if (!urg.get_distance(myMeasurement, &time_stamp)) {
+                logger.error("cyle") << "Urg_driver::get_distance(): " << urg.what();
+                continue;
+            }
+            {
+                std::lock_guard<std::mutex> lock(mymutex);
+                measurement = myMeasurement;
+                lastMeasurement = lms::Time::fromMillis(time_stamp);
+            }
+        }
+    });
     logger.debug("initialize")<<"end";
     return true;
 }
@@ -62,29 +79,21 @@ void LaserScanner::printSettings(){
 
 
 bool LaserScanner::deinitialize() {
+    running=false;
+    importer.join();
     urg.close();
     return true;
 }
 
 bool LaserScanner::cycle () {
-
-
-    long time_stamp = 0;
-    //get data TODO call this in another thread to stop it from blocking!
-    if (!urg.get_distance(measurement, &time_stamp)) {
-        logger.error("cyle") << "Urg_driver::get_distance(): " << urg.what();
-        return true;
-    }
-    //check if we have new data
-
-    lms::Time currentTime = lms::Time::fromMillis(time_stamp); //TODO not sure if millis is used
-    if(data_raw->timestamp() == currentTime){
+    std::lock_guard<std::mutex> lock(mymutex);
+    lms::Time lastTimestamp = data_raw->timestamp();
+    if(lastTimestamp == lastMeasurement){
         logger.warn("No new data aquired");
         return true;
     }
-
     //set urg values
-    data_raw->timestamp(currentTime);
+    data_raw->timestamp(lastTimestamp);
     data_raw->anglePerIndex = std::abs(urg.index2rad(0)-urg.index2rad(0));
     data_raw->startAngle = urg.index2rad(0);
     data_raw->maxDistance = urg.max_distance();
@@ -109,7 +118,7 @@ bool LaserScanner::cycle () {
     }
 
     if(config().get<bool>("printFront",false)){
-        printFront(measurement, time_stamp);
+        printFront(measurement, lastMeasurement.micros()/1000);
     }
     return true;
 }

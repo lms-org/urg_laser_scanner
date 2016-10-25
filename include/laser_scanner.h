@@ -8,6 +8,7 @@
 #include "lms/math/vertex.h"
 #include <lms/math/polyline.h>
 #include <sensor_utils/distance_sensor.h>
+#include <thread>
 
 class LaserScanner:public lms::Module{
 public:
@@ -17,11 +18,15 @@ public:
     virtual void configsChanged() override;
 
 private:
-
+    bool running;
+    std::thread importer;
     //TODO rotation
     lms::math::vertex2f position;
     qrk::Urg_driver urg;
+
+    std::mutex mymutex;
     std::vector<long> measurement;
+    lms::Time lastMeasurement;
     lms::WriteDataChannel<sensor_utils::DistanceSensorRadial> data_raw;
     lms::WriteDataChannel<lms::math::polyLine2f> data;
 
