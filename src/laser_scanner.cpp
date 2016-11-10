@@ -22,7 +22,7 @@ bool LaserScanner::initialize() {
     }
     logger.debug("initialize")<<"opened urg sensor";
     //set the range
-    urg.set_scanning_parameter(urg.deg2step(config().get<double>("minDeg",-90)), urg.deg2step(config().get<double>("maxDeg",90)), 0);
+    urg.set_scanning_parameter(urg.deg2step(config().get<double>("minDeg",-120)), urg.deg2step(config().get<double>("maxDeg",120)), 0);
     printSettings();
     //start measurement
     urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0);
@@ -44,6 +44,7 @@ bool LaserScanner::initialize() {
         }
     });
     logger.debug("initialize")<<"end";
+    configsChanged();
     return true;
 }
 
@@ -55,7 +56,7 @@ void LaserScanner::configsChanged(){
 
 void LaserScanner::printFront(const std::vector<long>& data, long time_stamp){
     int front_index = urg.step2index(0);
-    logger.info("front distance") << data[front_index] << " [mm], ("
+    logger.info("front distance")<<"raw: " << data[front_index]<<" trans: "<<data[front_index]+position.x*1000 << " [mm], ("
               << time_stamp << " [msec])";
 }
 
@@ -89,11 +90,11 @@ bool LaserScanner::cycle () {
     std::lock_guard<std::mutex> lock(mymutex);
     lms::Time lastTimestamp = data_raw->timestamp();
     if(lastTimestamp == lastMeasurement){
-        logger.warn("No new data aquired");
+        logger.warn("No new data aquired"); //TODO why is this never called?
         return true;
     }
     //set urg values
-    data_raw->timestamp(lastTimestamp);
+    data_raw->timestamp(lastMeasurement);
     data_raw->anglePerIndex = std::abs(urg.index2rad(0)-urg.index2rad(0));
     data_raw->startAngle = urg.index2rad(0);
     data_raw->maxDistance = urg.max_distance();
@@ -114,7 +115,7 @@ bool LaserScanner::cycle () {
             continue;
         }
         double radian = urg.index2rad(i);
-        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000-position);
+        data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000+position);
     }
 
     if(config().get<bool>("printFront",false)){
