@@ -1,44 +1,55 @@
 #include <laser_scanner.h>
 #include <iostream>
 #include <math.h>
-//#include <sensor_utils/distance_sensor.h>
+#include <lms/math/point_cloud.h>
 
 
 bool LaserScanner::initialize() {
     logger.debug("initialize")<<"start";
     data_raw = writeChannel<sensor_utils::DistanceSensorRadial>("URG_DATA_RAW");
-    data = writeChannel<lms::math::polyLine2f>("URG_DATA");
-    qrk::Connection_information information(1, nullptr);
-
+    data = writeChannel<lms::math::PointCloud2f>("URG_DATA");
+    newData = writeChannel<bool>("NEW_DATA");
 
     logger.debug("initialize")<<"trying to open urg";
     // Connects to the sensor
-    if (!urg.open(information.device_or_ip_name(),
-                  information.baudrate_or_port_number(),
-                  information.connection_type())) {
+    if (!urg.open(config().get<std::string>("device_or_ip_name","/dev/ttyACM0").c_str(),
+                  config().get<int>("baudrate_or_port_number",115200))) {
         logger.error("initialize") << "Urg_driver::open(): "
-                             << information.device_or_ip_name() << ": " << urg.what();
+                             << config().get<std::string>("device_or_ip_name","/dev/ttyACM0") << ": " << urg.what();
         return false;
     }
     logger.debug("initialize")<<"opened urg sensor";
     //set the range
-    urg.set_scanning_parameter(urg.deg2step(config().get<double>("minDeg",-120)), urg.deg2step(config().get<double>("maxDeg",120)), 0);
+    if(!urg.set_scanning_parameter(urg.deg2step(config().get<double>("startAtDeg",-60)), urg.deg2step(config().get<double>("stopAtDeg",60)), 0)){
+        logger.error("initialize")<<"failed to set scanning parameters: "<<urg.what();
+    }
     printSettings();
     //start measurement
-    urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0);
+    if(!urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0)){
+        logger.error("initialize")<<"failed starting measurement: "<<urg.what();
+    }
+
     //start importer thread
     running = true;
     importer=std::thread([this](){
         while(running){
             std::vector<long> myMeasurement;
+            std::vector<unsigned short> myIntensity;
             long time_stamp = 0;
             if (!urg.get_distance(myMeasurement, &time_stamp)) {
-                logger.error("cyle") << "Urg_driver::get_distance(): " << urg.what();
+            //if (!urg.get_distance_intensity(myMeasurement,myIntensity, &time_stamp)) {
+                logger.error("thread") << "Urg_driver::get_distance(): " << urg.what();
+                logger.warn("thread")<<"restarting measurement";
+                urg.stop_measurement();
+                if(!urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0)){
+                    logger.error("thread")<<"failed starting measurement: "<<urg.what();
+                }
                 continue;
             }
             {
                 std::lock_guard<std::mutex> lock(mymutex);
-                measurement = myMeasurement;
+                measurement_distance = myMeasurement;
+                measurement_intensity = myIntensity;
                 lastMeasurement = lms::Time::fromMillis(time_stamp);
             }
         }
@@ -49,8 +60,8 @@ bool LaserScanner::initialize() {
 }
 
 void LaserScanner::configsChanged(){
-    position.x = config().get<float>("x");
-    position.y = config().get<float>("y");
+    position.x = config().get<float>("xOffsetFromOriginMeter");
+    position.y = config().get<float>("xOffsetFromOriginMeter");
 }
 
 
@@ -90,23 +101,39 @@ bool LaserScanner::cycle () {
     std::lock_guard<std::mutex> lock(mymutex);
     lms::Time lastTimestamp = data_raw->timestamp();
     if(lastTimestamp == lastMeasurement){
-        logger.warn("No new data aquired"); //TODO why is this never called?
+        logger.debug("No new data aquired"); //TODO why is this never called?
+        *newData=false;
         return true;
     }
+    *newData = true;
     //set urg values
+    /*
     data_raw->timestamp(lastMeasurement);
-    data_raw->anglePerIndex = std::abs(urg.index2rad(0)-urg.index2rad(0));
+    data_raw->anglePerIndex = std::abs(urg.index2rad(1)-urg.index2rad(0));
     data_raw->startAngle = urg.index2rad(0);
     data_raw->maxDistance = urg.max_distance();
     data_raw->minDistance = urg.min_distance();
     data_raw->localPosition = position;
+    data_raw->intensities = measurement_intensity;
+    data_raw->distances.clear();
+    */
+    const int minIntensity = config().get<int>("minIntensity",-1);
 
     //convert to point-cloud
     data->points().clear();
-    long min_distance = urg.min_distance();
-    long max_distance = urg.max_distance();
-    for (int i = 0; i < (int)measurement.size(); ++i) {
-        float l = measurement[i];
+    //long min_distance = urg.min_distance();
+    //long max_distance = urg.max_distance();
+    if(measurement_intensity.size() != measurement_distance.size()){
+        logger.error("cycle")<<"measurement_intensity.size() != measurement_distance.size()";
+    }
+    for (int i = 0; i < (int)measurement_distance.size(); ++i) {
+        if(measurement_intensity.size() == measurement_distance.size()){
+            if(measurement_intensity[i] < minIntensity){
+                continue;
+            }
+        }
+        float l = measurement_distance[i];
+        /*
         if (l < min_distance) {
                 l=min_distance;
             continue;
@@ -114,12 +141,13 @@ bool LaserScanner::cycle () {
                 l=max_distance;
             continue;
         }
+        */
         double radian = urg.index2rad(i);
         data->points().push_back(lms::math::vertex2f(l * cos(radian),l * sin(radian))/1000+position);
     }
 
     if(config().get<bool>("printFront",false)){
-        printFront(measurement, lastMeasurement.micros()/1000);
+        printFront(measurement_distance, lastMeasurement.micros()/1000);
     }
     return true;
 }

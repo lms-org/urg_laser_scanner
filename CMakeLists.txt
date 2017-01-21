@@ -7,13 +7,11 @@ endif(USE_CONAN)
 
 set ( SOURCES 
         "src/laser_scanner.cpp"
-	"src/interface.cpp"
-        "src/Connection_information.cpp"
+        "src/interface.cpp"
 )
 
 set (HEADERS 
         "include/laser_scanner.h"
-        "include/Connection_information.h"
 )
 
 #set compiler flags
