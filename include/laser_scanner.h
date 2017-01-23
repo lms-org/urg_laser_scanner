@@ -9,7 +9,7 @@
 #include <sensor_utils/distance_sensor.h>
 #include <thread>
 #include "lms/math/point_cloud.h"
-#include "urg_cpp/Urg_driver.h"
+#include "urg/cpp/Urg_driver.h"
 
 class LaserScanner:public lms::Module{
 public:
