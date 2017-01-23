@@ -31,7 +31,6 @@ private:
     lms::Time lastMeasurement;
     lms::WriteDataChannel<sensor_utils::DistanceSensorRadial> data_raw;
     lms::WriteDataChannel<lms::math::PointCloud2f> data;
-    lms::WriteDataChannel<bool> newData;
 
     //todo change to printangle given in the config
     void printFront(const std::vector<long>& data_raw, long time_stamp);

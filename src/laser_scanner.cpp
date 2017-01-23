@@ -8,7 +8,6 @@ bool LaserScanner::initialize() {
     logger.debug("initialize")<<"start";
     data_raw = writeChannel<sensor_utils::DistanceSensorRadial>("URG_DATA_RAW");
     data = writeChannel<lms::math::PointCloud2f>("URG_DATA");
-    newData = writeChannel<bool>("NEW_DATA");
 
     logger.debug("initialize")<<"trying to open urg";
     // Connects to the sensor
@@ -102,10 +101,8 @@ bool LaserScanner::cycle () {
     lms::Time lastTimestamp = data_raw->timestamp();
     if(lastTimestamp == lastMeasurement){
         logger.debug("No new data aquired"); //TODO why is this never called?
-        *newData=false;
         return true;
     }
-    *newData = true;
     //set urg values
     /*
     data_raw->timestamp(lastMeasurement);
@@ -149,5 +146,6 @@ bool LaserScanner::cycle () {
     if(config().get<bool>("printFront",false)){
         printFront(measurement_distance, lastMeasurement.micros()/1000);
     }
+    data.publish();
     return true;
 }
