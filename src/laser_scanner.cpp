@@ -24,14 +24,20 @@ bool LaserScanner::initialize() {
     }
     printSettings();
     //start measurement
+    /*
     if(!urg.start_measurement(qrk::Urg_driver::Distance, qrk::Urg_driver::Infinity_times, 0)){
         logger.error("initialize")<<"failed starting measurement: "<<urg.what();
     }
+    */
 
     //start importer thread
     running = true;
     importer=std::thread([this](){
         while(running){
+            //instead of running it in inv. loops that's the way to go as it won't work if the application crashes
+            if(!urg.start_measurement(qrk::Urg_driver::Distance, 1, 0)){
+                logger.error("thread")<<"failed starting measurement: "<<urg.what();
+            }
             std::vector<long> myMeasurement;
             std::vector<unsigned short> myIntensity;
             long time_stamp = 0;
