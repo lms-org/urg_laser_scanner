@@ -66,7 +66,7 @@ bool LaserScanner::initialize() {
 
 void LaserScanner::configsChanged(){
     position.x = config().get<float>("xOffsetFromOriginMeter");
-    position.y = config().get<float>("xOffsetFromOriginMeter");
+    position.y = config().get<float>("yOffsetFromOriginMeter");
 }
 
 
