@@ -126,9 +126,9 @@ bool LaserScanner::cycle () {
     data->points().clear();
     //long min_distance = urg.min_distance();
     //long max_distance = urg.max_distance();
-    if(measurement_intensity.size() != measurement_distance.size()){
-        logger.error("cycle")<<"measurement_intensity.size() != measurement_distance.size()";
-    }
+    //if(measurement_intensity.size() != measurement_distance.size()){
+    //    logger.info("cycle")<<"measurement_intensity.size() != measurement_distance.size()";
+    //}
     for (int i = 0; i < (int)measurement_distance.size(); ++i) {
         if(measurement_intensity.size() == measurement_distance.size()){
             if(measurement_intensity[i] < minIntensity){
